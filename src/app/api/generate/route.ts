@@ -2,14 +2,16 @@ import { NextRequest, NextResponse } from 'next/server';
 import * as XLSX from 'xlsx';
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 import JSZip from 'jszip';
+import fs from 'fs';
+import path from 'path';
 
 // Configuración de la posición del nombre en el PDF
 const NAME_CONFIG = {
-  x: 390, // Posición X (centrado aproximado en página A4)
+  x: 450, // Posición X - AUMENTA este valor para mover más a la derecha
   y: 336, // Posición Y desde abajo
-  width: 520, // Ancho del área del nombre
-  height: 70, // Alto del área del nombre
-  maxFontSize: 42, // Tamaño máximo de fuente
+  width: 600, // Ancho del área del nombre - AUMENTA para cubrir más área
+  height: 80, // Alto del área del nombre - AUMENTA para cubrir más área
+  maxFontSize: 28, // Tamaño máximo de fuente
   minFontSize: 18, // Tamaño mínimo de fuente
 };
 
@@ -32,13 +34,16 @@ export async function POST(request: NextRequest) {
     const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
     const data = XLSX.utils.sheet_to_json(firstSheet, { header: 1 }) as string[][];
     
-     // Extraer nombres:
-// - En tu Excel los nombres están en la columna B (índice 1)
-// - La primera fila con "NOMBRES" debe ignorarse
+     // Extraer nombres de la columna B, ignorando encabezados automáticamente
      const names = data
-     .map((row) => (row?.[1] ?? "")) // 👈 columna B
+     .map((row) => (row?.[1] ?? "")) // columna B
      .map((v) => String(v).trim())
-     .filter((v) => v && v.toUpperCase() !== "NOMBRES");
+     .filter((v) => {
+       if (!v) return false;
+       const upper = v.toUpperCase();
+       // Ignora encabezados comunes
+       return !upper.includes('NOMBRE') && !upper.includes('APELLIDO');
+     });
 
 
     if (names.length === 0) {
@@ -71,9 +76,16 @@ export async function POST(request: NextRequest) {
       const pages = pdfDoc.getPages();
       const firstPage = pages[0];
       
-      // Cargar fuente
-      const font = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
-      const textColor = rgb(0.35, 0.35, 0.35); // gris parecido al ejemplo
+      // Cargar fuente Aptos en negrita
+      let font;
+      try {
+        const fontPath = path.join(process.cwd(), 'public', 'fonts', 'aptos-bold.ttf');
+        const fontBytes = fs.readFileSync(fontPath);
+        font = await pdfDoc.embedFont(fontBytes);
+      } catch {
+        font = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+      }
+      const textColor = rgb(0.35, 0.35, 0.35);
 
       // Calcular tamaño de fuente apropiado
       let fontSize = NAME_CONFIG.maxFontSize;

@@ -1,12 +1,96 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 export default function Home() {
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [userRole, setUserRole] = useState('');
+  const [userId, setUserId] = useState('');
+  const [loginId, setLoginId] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
+  const [showAdmin, setShowAdmin] = useState(false);
+  
   const [excelFile, setExcelFile] = useState<File | null>(null);
   const [pdfFile, setPdfFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState('');
+
+  const [users, setUsers] = useState<any[]>([]);
+  const [newUserId, setNewUserId] = useState('');
+  const [newUserPassword, setNewUserPassword] = useState('');
+  const [newUserRole, setNewUserRole] = useState('user');
+  const [editUserId, setEditUserId] = useState('');
+  const [editPassword, setEditPassword] = useState('');
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const res = await fetch('/api/auth', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'login', id: loginId, password: loginPassword })
+    });
+    const data = await res.json();
+    if (data.success) {
+      setIsLoggedIn(true);
+      setUserRole(data.role);
+      setUserId(data.id);
+      setStatus('');
+    } else {
+      setStatus('Credenciales incorrectas');
+    }
+  };
+
+  const loadUsers = async () => {
+    const res = await fetch('/api/auth', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'getUsers' })
+    });
+    const data = await res.json();
+    setUsers(data.users);
+  };
+
+  const handleCreateUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const res = await fetch('/api/auth', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'createUser', newId: newUserId, newPassword: newUserPassword, newRole: newUserRole })
+    });
+    const data = await res.json();
+    if (data.success) {
+      setStatus('Usuario creado exitosamente');
+      setNewUserId('');
+      setNewUserPassword('');
+      loadUsers();
+    } else {
+      setStatus(data.message);
+    }
+  };
+
+  const handleUpdatePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const res = await fetch('/api/auth', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'updateUser', userId: editUserId, newPassword: editPassword })
+    });
+    const data = await res.json();
+    if (data.success) {
+      setStatus('Contraseña actualizada');
+      setEditUserId('');
+      setEditPassword('');
+    } else {
+      setStatus(data.message);
+    }
+  };
+
+  const handleLogout = () => {
+    setIsLoggedIn(false);
+    setUserRole('');
+    setUserId('');
+    setShowAdmin(false);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -34,7 +118,6 @@ export default function Home() {
         throw new Error(error.error || 'Error al generar PDFs');
       }
 
-      // Descargar el ZIP
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -53,10 +136,112 @@ export default function Home() {
     }
   };
 
+  useEffect(() => {
+    if (showAdmin && userRole === 'admin') {
+      loadUsers();
+    }
+  }, [showAdmin, userRole]);
+
+  if (!isLoggedIn) {
+    return (
+      <div style={styles.container}>
+        <div style={styles.card}>
+          <h1 style={styles.title}>Iniciar Sesión</h1>
+          <form onSubmit={handleLogin} style={styles.form}>
+            <div style={styles.inputGroup}>
+              <label style={styles.label}>Usuario</label>
+              <input
+                type="text"
+                value={loginId}
+                onChange={(e) => setLoginId(e.target.value)}
+                style={styles.input}
+                required
+              />
+            </div>
+            <div style={styles.inputGroup}>
+              <label style={styles.label}>Contraseña</label>
+              <input
+                type="password"
+                value={loginPassword}
+                onChange={(e) => setLoginPassword(e.target.value)}
+                style={styles.input}
+                required
+              />
+            </div>
+            <button type="submit" style={styles.button}>Ingresar</button>
+          </form>
+          {status && <div style={styles.statusError}>{status}</div>}
+        </div>
+      </div>
+    );
+  }
+
+  if (showAdmin && userRole === 'admin') {
+    return (
+      <div style={styles.container}>
+        <div style={{...styles.card, maxWidth: '700px'}}>
+          <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px'}}>
+            <h1 style={styles.title}>Panel de Administración</h1>
+            <button onClick={() => setShowAdmin(false)} style={styles.buttonSecondary}>Volver</button>
+          </div>
+
+          <h2 style={{fontSize: '18px', marginBottom: '15px'}}>Crear Usuario</h2>
+          <form onSubmit={handleCreateUser} style={styles.form}>
+            <div style={styles.inputGroup}>
+              <label style={styles.label}>ID Usuario</label>
+              <input type="text" value={newUserId} onChange={(e) => setNewUserId(e.target.value)} style={styles.input} required />
+            </div>
+            <div style={styles.inputGroup}>
+              <label style={styles.label}>Contraseña</label>
+              <input type="password" value={newUserPassword} onChange={(e) => setNewUserPassword(e.target.value)} style={styles.input} required />
+            </div>
+            <div style={styles.inputGroup}>
+              <label style={styles.label}>Rol</label>
+              <select value={newUserRole} onChange={(e) => setNewUserRole(e.target.value)} style={styles.input}>
+                <option value="user">Usuario</option>
+                <option value="admin">Administrador</option>
+              </select>
+            </div>
+            <button type="submit" style={styles.button}>Crear Usuario</button>
+          </form>
+
+          <hr style={{margin: '30px 0', border: 'none', borderTop: '1px solid #ddd'}} />
+
+          <h2 style={{fontSize: '18px', marginBottom: '15px'}}>Cambiar Contraseña</h2>
+          <form onSubmit={handleUpdatePassword} style={styles.form}>
+            <div style={styles.inputGroup}>
+              <label style={styles.label}>Seleccionar Usuario</label>
+              <select value={editUserId} onChange={(e) => setEditUserId(e.target.value)} style={styles.input} required>
+                <option value="">Seleccionar...</option>
+                {users.map(u => <option key={u.id} value={u.id}>{u.id} ({u.role})</option>)}
+              </select>
+            </div>
+            <div style={styles.inputGroup}>
+              <label style={styles.label}>Nueva Contraseña</label>
+              <input type="password" value={editPassword} onChange={(e) => setEditPassword(e.target.value)} style={styles.input} required />
+            </div>
+            <button type="submit" style={styles.button}>Actualizar Contraseña</button>
+          </form>
+
+          {status && <div style={styles.statusSuccess}>{status}</div>}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div style={styles.container}>
       <div style={styles.card}>
-        <h1 style={styles.title}>Generador Masivo de PDFs</h1>
+        <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px'}}>
+          <h1 style={styles.title}>Generador Masivo de PDFs</h1>
+          <div style={{display: 'flex', gap: '10px'}}>
+            {userRole === 'admin' && (
+              <button onClick={() => setShowAdmin(true)} style={styles.buttonSecondary}>Admin</button>
+            )}
+            <button onClick={handleLogout} style={styles.buttonSecondary}>Salir</button>
+          </div>
+        </div>
+        <p style={{marginBottom: '20px', color: '#666'}}>Usuario: {userId} ({userRole})</p>
         
         <form onSubmit={handleSubmit} style={styles.form}>
           <div style={styles.inputGroup}>
@@ -112,7 +297,7 @@ const styles = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#f5f5f5',
+    background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 50%, #43e97b 100%)',
     padding: '20px',
   },
   card: {
@@ -162,6 +347,15 @@ const styles = {
     cursor: 'pointer',
     marginTop: '10px',
   },
+  buttonSecondary: {
+    backgroundColor: '#666',
+    color: 'white',
+    padding: '8px 16px',
+    border: 'none',
+    borderRadius: '4px',
+    fontSize: '14px',
+    cursor: 'pointer',
+  },
   buttonDisabled: {
     backgroundColor: '#ccc',
     cursor: 'not-allowed',
@@ -176,9 +370,19 @@ const styles = {
   statusSuccess: {
     backgroundColor: '#d4edda',
     color: '#155724',
+    marginTop: '20px',
+    padding: '12px',
+    borderRadius: '4px',
+    fontSize: '14px',
+    textAlign: 'center' as const,
   },
   statusError: {
     backgroundColor: '#f8d7da',
     color: '#721c24',
+    marginTop: '20px',
+    padding: '12px',
+    borderRadius: '4px',
+    fontSize: '14px',
+    textAlign: 'center' as const,
   },
 };
