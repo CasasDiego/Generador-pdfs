@@ -157,7 +157,7 @@ firstPage.drawText(name, {
     const zipBuffer = await zip.generateAsync({ type: 'nodebuffer' });
 
     // Retornar ZIP
-    return new NextResponse(zipBuffer, {
+    return new NextResponse(new Uint8Array(zipBuffer), {
       headers: {
         'Content-Type': 'application/zip',
         'Content-Disposition': 'attachment; filename="certificados.zip"',
