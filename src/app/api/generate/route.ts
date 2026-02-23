@@ -7,7 +7,7 @@ import path from 'path';
 
 // Configuración de la posición del nombre en el PDF
 const NAME_CONFIG = {
-  x: 450, // Posición X - AUMENTA este valor para mover más a la derecha
+  x: 420, // Posición X - DISMINUYE para mover a la izquierda, AUMENTA para mover a la derecha
   y: 336, // Posición Y desde abajo
   width: 600, // Ancho del área del nombre - AUMENTA para cubrir más área
   height: 80, // Alto del área del nombre - AUMENTA para cubrir más área
