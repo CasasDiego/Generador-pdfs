@@ -13,7 +13,8 @@
     "react-dom": "^18.2.0",
     "xlsx": "^0.18.5",
     "pdf-lib": "^1.17.1",
-    "jszip": "^3.10.1"
+    "jszip": "^3.10.1",
+    "mongodb": "^6.3.0"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",

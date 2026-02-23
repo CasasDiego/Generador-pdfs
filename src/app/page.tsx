@@ -21,6 +21,8 @@ export default function Home() {
   const [newUserRole, setNewUserRole] = useState('user');
   const [editUserId, setEditUserId] = useState('');
   const [editPassword, setEditPassword] = useState('');
+  const [showLogs, setShowLogs] = useState(false);
+  const [logs, setLogs] = useState<any[]>([]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,6 +37,12 @@ export default function Home() {
       setUserRole(data.role);
       setUserId(data.id);
       setStatus('');
+      // Registrar login
+      await fetch('/api/logs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'addLogin', userId: data.id })
+      });
     } else {
       setStatus('Credenciales incorrectas');
     }
@@ -90,6 +98,17 @@ export default function Home() {
     setUserRole('');
     setUserId('');
     setShowAdmin(false);
+    setShowLogs(false);
+  };
+
+  const loadLogs = async () => {
+    const res = await fetch('/api/logs', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'getLogs' })
+    });
+    const data = await res.json();
+    setLogs(data.logs);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -129,6 +148,18 @@ export default function Home() {
       document.body.removeChild(a);
 
       setStatus('¡PDFs generados exitosamente!');
+      
+      // Registrar generación de PDFs
+      await fetch('/api/logs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          action: 'add', 
+          userId, 
+          excelFileName: excelFile.name,
+          pdfFileName: pdfFile.name
+        })
+      });
     } catch (error) {
       setStatus(`Error: ${error instanceof Error ? error.message : 'Error desconocido'}`);
     } finally {
@@ -140,7 +171,10 @@ export default function Home() {
     if (showAdmin && userRole === 'admin') {
       loadUsers();
     }
-  }, [showAdmin, userRole]);
+    if (showLogs && userRole === 'admin') {
+      loadLogs();
+    }
+  }, [showAdmin, showLogs, userRole]);
 
   if (!isLoggedIn) {
     return (
@@ -171,6 +205,52 @@ export default function Home() {
             <button type="submit" style={styles.button}>Ingresar</button>
           </form>
           {status && <div style={styles.statusError}>{status}</div>}
+        </div>
+      </div>
+    );
+  }
+
+  if (showLogs && userRole === 'admin') {
+    return (
+      <div style={styles.container}>
+        <div style={{...styles.card, maxWidth: '900px'}}>
+          <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px'}}>
+            <h1 style={styles.title}>Historial de Acciones</h1>
+            <button onClick={() => setShowLogs(false)} style={styles.buttonSecondary}>Volver</button>
+          </div>
+
+          <div style={{overflowX: 'auto'}}>
+            <table style={styles.table}>
+              <thead>
+                <tr>
+                  <th style={styles.th}>Usuario</th>
+                  <th style={styles.th}>Acción</th>
+                  <th style={styles.th}>Archivo Excel</th>
+                  <th style={styles.th}>Archivo PDF</th>
+                  <th style={styles.th}>Fecha</th>
+                  <th style={styles.th}>Hora</th>
+                </tr>
+              </thead>
+              <tbody>
+                {logs.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} style={{...styles.td, textAlign: 'center'}}>No hay registros</td>
+                  </tr>
+                ) : (
+                  logs.map(log => (
+                    <tr key={log.id}>
+                      <td style={styles.td}>{log.userId}</td>
+                      <td style={styles.td}>{log.action}</td>
+                      <td style={styles.td}>{log.excelFile}</td>
+                      <td style={styles.td}>{log.pdfFile}</td>
+                      <td style={styles.td}>{log.date}</td>
+                      <td style={styles.td}>{log.time}</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     );
@@ -236,7 +316,10 @@ export default function Home() {
           <h1 style={styles.title}>Generador Masivo de PDFs</h1>
           <div style={{display: 'flex', gap: '10px'}}>
             {userRole === 'admin' && (
-              <button onClick={() => setShowAdmin(true)} style={styles.buttonSecondary}>Admin</button>
+              <>
+                <button onClick={() => setShowAdmin(true)} style={styles.buttonSecondary}>Admin</button>
+                <button onClick={() => setShowLogs(true)} style={styles.buttonSecondary}>Historial</button>
+              </>
             )}
             <button onClick={handleLogout} style={styles.buttonSecondary}>Salir</button>
           </div>
@@ -384,5 +467,23 @@ const styles = {
     borderRadius: '4px',
     fontSize: '14px',
     textAlign: 'center' as const,
+  },
+  table: {
+    width: '100%',
+    borderCollapse: 'collapse' as const,
+    marginTop: '20px',
+  },
+  th: {
+    backgroundColor: '#f5f5f5',
+    padding: '12px',
+    textAlign: 'left' as const,
+    borderBottom: '2px solid #ddd',
+    fontSize: '14px',
+    fontWeight: '600',
+  },
+  td: {
+    padding: '12px',
+    borderBottom: '1px solid #eee',
+    fontSize: '14px',
   },
 };
