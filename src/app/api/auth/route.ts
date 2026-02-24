@@ -10,6 +10,11 @@ export async function POST(request: NextRequest) {
   try {
     if (action === 'login') {
       // En el body, "id" es el nombre de usuario
+      console.log('[AUTH] Intento de login', {
+        usernameFromBody: id,
+        hasPassword: Boolean(password),
+      });
+
       const users = await db
         .select({
           id: usersTable.id,
@@ -20,10 +25,24 @@ export async function POST(request: NextRequest) {
         .where(and(eq(usersTable.username, id), eq(usersTable.password, password)))
         .limit(1);
 
+      console.log('[AUTH] Resultado query login', {
+        count: users.length,
+        users,
+      });
+
       if (users.length > 0) {
         const user = users[0];
+        console.log('[AUTH] Login exitoso', {
+          id: user.id,
+          username: user.username,
+          role: user.role,
+        });
         return NextResponse.json({ success: true, role: user.role, id: user.username });
       }
+
+      console.warn('[AUTH] Credenciales inválidas para usuario', {
+        usernameFromBody: id,
+      });
 
       return NextResponse.json(
         { success: false, message: 'Credenciales incorrectas' },
@@ -59,7 +78,6 @@ export async function POST(request: NextRequest) {
       await db
         .insert(usersTable)
         .values({
-          id: newId,
           username: newId,
           password: newPassword,
           role: newRole,

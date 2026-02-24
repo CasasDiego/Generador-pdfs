@@ -271,7 +271,7 @@ export default function Home() {
           <h2 style={{fontSize: '18px', marginBottom: '15px'}}>Crear Usuario</h2>
           <form onSubmit={handleCreateUser} style={styles.form}>
             <div style={styles.inputGroup}>
-              <label style={styles.label}>ID Usuario</label>
+              <label style={styles.label}>Username</label>
               <input type="text" value={newUserId} onChange={(e) => setNewUserId(e.target.value)} style={styles.input} required />
             </div>
             <div style={styles.inputGroup}>
