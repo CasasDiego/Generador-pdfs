@@ -59,6 +59,7 @@ export async function POST(request: NextRequest) {
       await db
         .insert(usersTable)
         .values({
+          id: newId,
           username: newId,
           password: newPassword,
           role: newRole,
