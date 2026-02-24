@@ -1,55 +1,67 @@
 import { NextRequest, NextResponse } from 'next/server';
-import clientPromise from '@/lib/mongodb';
+import { desc } from 'drizzle-orm';
+import { db } from '@/lib/turso';
+import { logsTable } from '@/lib/db/schema';
 
 export async function POST(request: NextRequest) {
   const body = await request.json();
   const { action, userId, excelFileName, pdfFileName } = body;
 
   try {
-    const client = await clientPromise;
-    const db = client.db('pdf-generator');
-    const logsCollection = db.collection('logs');
-
     if (action === 'add') {
-      const newLog = {
+      const now = new Date();
+      await db.insert(logsTable).values({
         userId,
         action: 'Generación de PDFs',
         excelFile: excelFileName,
         pdfFile: pdfFileName,
-        date: new Date().toLocaleDateString('es-ES'),
-        time: new Date().toLocaleTimeString('es-ES'),
-        timestamp: new Date(),
-      };
-      await logsCollection.insertOne(newLog);
+        date: now.toLocaleDateString('es-ES'),
+        time: now.toLocaleTimeString('es-ES'),
+        timestamp: now.toISOString(),
+      });
+
       return NextResponse.json({ success: true });
     }
 
     if (action === 'addLogin') {
-      const newLog = {
+      const now = new Date();
+      await db.insert(logsTable).values({
         userId,
         action: 'Inicio de sesión',
         excelFile: '-',
         pdfFile: '-',
-        date: new Date().toLocaleDateString('es-ES'),
-        time: new Date().toLocaleTimeString('es-ES'),
-        timestamp: new Date(),
-      };
-      await logsCollection.insertOne(newLog);
+        date: now.toLocaleDateString('es-ES'),
+        time: now.toLocaleTimeString('es-ES'),
+        timestamp: now.toISOString(),
+      });
+
       return NextResponse.json({ success: true });
     }
 
     if (action === 'getLogs') {
-      const logs = await logsCollection
-        .find({})
-        .sort({ timestamp: -1 })
-        .limit(100)
-        .toArray();
+      const logs = await db
+        .select({
+          userId: logsTable.userId,
+          action: logsTable.action,
+          excelFile: logsTable.excelFile,
+          pdfFile: logsTable.pdfFile,
+          date: logsTable.date,
+          time: logsTable.time,
+          timestamp: logsTable.timestamp,
+        })
+        .from(logsTable)
+        .orderBy(desc(logsTable.timestamp))
+        .limit(100);
+
       return NextResponse.json({ logs });
     }
 
     return NextResponse.json({ success: false }, { status: 400 });
   } catch (error) {
     console.error('Error en logs:', error);
-    return NextResponse.json({ success: false, error: 'Error de base de datos' }, { status: 500 });
+    return NextResponse.json(
+      { success: false, error: 'Error de base de datos' },
+      { status: 500 }
+    );
   }
 }
