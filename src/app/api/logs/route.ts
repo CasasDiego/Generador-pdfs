@@ -10,13 +10,19 @@ export async function POST(request: NextRequest) {
   try {
     if (action === 'add') {
       const now = new Date();
+      const peruDate = now.toLocaleDateString('es-PE', {
+        timeZone: 'America/Lima',
+      });
+      const peruTime = now.toLocaleTimeString('es-PE', {
+        timeZone: 'America/Lima',
+      });
       await db.insert(logsTable).values({
         userId,
         action: 'Generación de PDFs',
         excelFile: excelFileName,
         pdfFile: pdfFileName,
-        date: now.toLocaleDateString('es-ES'),
-        time: now.toLocaleTimeString('es-ES'),
+        date: peruDate,
+        time: peruTime,
         timestamp: now.toISOString(),
       });
 
@@ -25,13 +31,19 @@ export async function POST(request: NextRequest) {
 
     if (action === 'addLogin') {
       const now = new Date();
+      const peruDate = now.toLocaleDateString('es-PE', {
+        timeZone: 'America/Lima',
+      });
+      const peruTime = now.toLocaleTimeString('es-PE', {
+        timeZone: 'America/Lima',
+      });
       await db.insert(logsTable).values({
         userId,
         action: 'Inicio de sesión',
         excelFile: '-',
         pdfFile: '-',
-        date: now.toLocaleDateString('es-ES'),
-        time: now.toLocaleTimeString('es-ES'),
+        date: peruDate,
+        time: peruTime,
         timestamp: now.toISOString(),
       });
 

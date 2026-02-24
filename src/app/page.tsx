@@ -41,7 +41,10 @@ export default function Home() {
       await fetch('/api/logs', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'addLogin', userId: data.id })
+        body: JSON.stringify({ 
+          action: 'addLogin', 
+          userId: data.id,
+        })
       });
     } else {
       setStatus('Credenciales incorrectas');
@@ -157,7 +160,7 @@ export default function Home() {
           action: 'add', 
           userId, 
           excelFileName: excelFile.name,
-          pdfFileName: pdfFile.name
+          pdfFileName: pdfFile.name,
         })
       });
     } catch (error) {
