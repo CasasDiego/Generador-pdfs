@@ -1,45 +1,55 @@
 import { NextRequest, NextResponse } from 'next/server';
-
-// Almacenamiento en memoria de los logs
-let logs: any[] = [];
+import clientPromise from '@/lib/mongodb';
 
 export async function POST(request: NextRequest) {
   const body = await request.json();
   const { action, userId, excelFileName, pdfFileName } = body;
 
-  if (action === 'add') {
-    const newLog = {
-      id: Date.now(),
-      userId,
-      action: 'Generación de PDFs',
-      excelFile: excelFileName,
-      pdfFile: pdfFileName,
-      date: new Date().toLocaleDateString('es-ES'),
-      time: new Date().toLocaleTimeString('es-ES'),
-      timestamp: new Date().toISOString(),
-    };
-    logs.unshift(newLog); // Agregar al inicio
-    return NextResponse.json({ success: true });
-  }
+  try {
+    const client = await clientPromise;
+    const db = client.db('pdf-generator');
+    const logsCollection = db.collection('logs');
 
-  if (action === 'addLogin') {
-    const newLog = {
-      id: Date.now(),
-      userId,
-      action: 'Inicio de sesión',
-      excelFile: '-',
-      pdfFile: '-',
-      date: new Date().toLocaleDateString('es-ES'),
-      time: new Date().toLocaleTimeString('es-ES'),
-      timestamp: new Date().toISOString(),
-    };
-    logs.unshift(newLog);
-    return NextResponse.json({ success: true });
-  }
+    if (action === 'add') {
+      const newLog = {
+        userId,
+        action: 'Generación de PDFs',
+        excelFile: excelFileName,
+        pdfFile: pdfFileName,
+        date: new Date().toLocaleDateString('es-ES'),
+        time: new Date().toLocaleTimeString('es-ES'),
+        timestamp: new Date(),
+      };
+      await logsCollection.insertOne(newLog);
+      return NextResponse.json({ success: true });
+    }
 
-  if (action === 'getLogs') {
-    return NextResponse.json({ logs });
-  }
+    if (action === 'addLogin') {
+      const newLog = {
+        userId,
+        action: 'Inicio de sesión',
+        excelFile: '-',
+        pdfFile: '-',
+        date: new Date().toLocaleDateString('es-ES'),
+        time: new Date().toLocaleTimeString('es-ES'),
+        timestamp: new Date(),
+      };
+      await logsCollection.insertOne(newLog);
+      return NextResponse.json({ success: true });
+    }
 
-  return NextResponse.json({ success: false }, { status: 400 });
+    if (action === 'getLogs') {
+      const logs = await logsCollection
+        .find({})
+        .sort({ timestamp: -1 })
+        .limit(100)
+        .toArray();
+      return NextResponse.json({ logs });
+    }
+
+    return NextResponse.json({ success: false }, { status: 400 });
+  } catch (error) {
+    console.error('Error en logs:', error);
+    return NextResponse.json({ success: false, error: 'Error de base de datos' }, { status: 500 });
+  }
 }
